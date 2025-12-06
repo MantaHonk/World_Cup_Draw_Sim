@@ -1,4 +1,4 @@
-def Country:
+def Country():
 
     def __init__(self,name,conf, pot):
         self.name = name
