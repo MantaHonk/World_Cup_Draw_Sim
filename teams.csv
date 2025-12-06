@@ -1,0 +1,49 @@
+Name,Confederation,Ranking,Pot
+United States,CONCACAF,14,1
+Mexico,CONCACAF,15,1
+Canada,CONCACAF,27,1
+Spain,UEFA,1,1
+Argentina,CONMEBOL,2,1
+France,UEFA,3,1
+England,UEFA,4,1
+Brazil,CONMEBOL,5,1
+Portugal,UEFA,6,1
+Netherlands,UEFA,7,1
+Belgium,UEFA,8,1
+Germany,UEFA,9,1
+Croatia,UEFA,10,2
+Morocco,CAF,11,2
+Colombia,CONMEBOL,13,2
+Uruguay,CONMEBOL,16,2
+Switzerland,UEFA,17,2
+Japan,AFC,18,2
+Senegal,CAF,19,2
+Iran,AFC,20,2
+South Korea,AFC,22,2
+Ecuador,CONMEBOL,23,2
+Austria,UEFA,24,2
+Australia,AFC,26,2
+Norway,UEFA,29,3
+Panama,CONCACAF,30,3
+Ehypt,CAF,34,3
+Algeria,CAF,35,3
+Scotland,UEFA,36,3
+Paraguay,CONMEBOL,39,3
+Tunisia,CAF,40,3
+Ivory Coast,CAF,42,3
+Uzbekistan,AFC,50,3
+Qatar,AFC,51,3
+Saudi Arabia,AFC,60,3
+South Africa,CAF,61,3
+Jordan,AFC,66,4
+Cape Verde,CAF,68,4
+Ghana,CAF,72,4
+Curacao,CONCACAF,82,4
+Haiti,CONCACAF,84,4
+New Zealand,OFC,86,4
+UEFA Path A,UEFA,101,4
+UEFA Path B,UEFA,102,4
+UEFA Path C,UEFA,103,4
+UEFA Path D,UEFA,104,4
+IC Path 1,OFC:CONCACAF:CAF,105,4
+IC Path 2,CONMEBOL:CONCACAF:AFC,106,4
