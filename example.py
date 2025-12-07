@@ -64,11 +64,14 @@ sns.heatmap(df2, annot=True)
 plt.title('Soccer match heatmap')
 plt.show()
 
+teams = 'teams.csv'
+
+teams_df = pd.read_csv(teams)
 
 # --- 1. Setup Data ---
 data = {
-    'Pot_ID':[1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4],
-    'Team_ID':["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"]
+    'Pot_ID':teams_df["Pot"].to_list(),
+    'Team_ID':teams_df["Name"].to_list()
 }
 df_teams = pd.DataFrame(data)
 
@@ -87,7 +90,7 @@ team_to_index = {team: i for i, team in enumerate(all_teams_list)}
 def generate_one_valid_assignment(df_teams_input):
     """Generates one random assignment where each group has one team per pot."""
     pots = df_teams_input['Pot_ID'].unique()
-    num_teams_per_pot = 4
+    num_teams_per_pot = 12
     group_assignments = pd.DataFrame(columns=['Group_ID', 'Pot_ID', 'Team_ID'])
     
     for pot_id in pots:
@@ -138,7 +141,10 @@ frequency_matrix = pd.DataFrame(
 
 # Normalize the counts to show probability/percentage instead of raw counts
 # Divide by the number of simulations to get the probability of a matchup (0 to 1)
+desired_order_df = df_teams.sort_values(by=['Pot_ID', 'Team_ID']).reset_index(drop=True)
+sort_order = desired_order_df['Team_ID'].to_list()
 probability_matrix = frequency_matrix / NUM_SIMULATIONS
+probability_matrix = probability_matrix.reindex(index=sort_order, columns=sort_order)
 np.fill_diagonal(probability_matrix.values, 1.0) 
 
 plt.figure(figsize=(14, 12))
