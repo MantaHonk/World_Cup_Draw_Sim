@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import seaborn as sns
 # # Create a NumPy array
 # array_np = np.array([1, 2, 3, 4, 5])
@@ -52,17 +53,17 @@ import seaborn as sns
 # plt.title('Soccer match heatmap')
 # plt.show()
 
-df = pd.DataFrame([['Mexico','South Africa'],['South Africa','Mexico'],['Mexico','Mexico'],['South Africa','South Africa'],
-                    ['Qatar','Canada'],['Canada','Qatar'],['Qatar','Qatar'],['Canada','Canada']],
-                    columns=['Team','Opponent'])
+# df = pd.DataFrame([['Mexico','South Africa'],['South Africa','Mexico'],['Mexico','Mexico'],['South Africa','South Africa'],
+#                     ['Qatar','Canada'],['Canada','Qatar'],['Qatar','Qatar'],['Canada','Canada']],
+#                     columns=['Team','Opponent'])
 
 
-df2 = pd.crosstab(df['Team'], df['Opponent'])
-print(df2)
-df2.div(len(df))
-sns.heatmap(df2, annot=True)
-plt.title('Soccer match heatmap')
-plt.show()
+# df2 = pd.crosstab(df['Team'], df['Opponent'])
+# print(df2)
+# df2.div(len(df))
+# sns.heatmap(df2, annot=True)
+# plt.title('Soccer match heatmap')
+# plt.show()
 
 teams = 'teams.csv'
 
@@ -71,12 +72,13 @@ teams_df = pd.read_csv(teams)
 # --- 1. Setup Data ---
 data = {
     'Pot_ID':teams_df["Pot"].to_list(),
-    'Team_ID':teams_df["Name"].to_list()
+    'Team_ID':teams_df["Name"].to_list(),
+    'Ranking':teams_df["Ranking"].to_list()
 }
 df_teams = pd.DataFrame(data)
 
 # Get a list of all unique teams to define the final matrix size (A-P)
-all_teams_list = sorted(df_teams['Team_ID'].unique())
+all_teams_list = df_teams['Team_ID'].unique()
 num_teams = len(all_teams_list)
 
 # Initialize an empty frequency matrix (DataFrame) with all teams as index/columns
@@ -141,26 +143,33 @@ frequency_matrix = pd.DataFrame(
 
 # Normalize the counts to show probability/percentage instead of raw counts
 # Divide by the number of simulations to get the probability of a matchup (0 to 1)
-desired_order_df = df_teams.sort_values(by=['Pot_ID', 'Team_ID']).reset_index(drop=True)
-sort_order = desired_order_df['Team_ID'].to_list()
+# desired_order_df = df_teams.sort_values(by=['Pot_ID', 'Team_ID']).reset_index(drop=True)
+# sort_order = desired_order_df['Team_ID'].to_list()
 probability_matrix = frequency_matrix / NUM_SIMULATIONS
-probability_matrix = probability_matrix.reindex(index=sort_order, columns=sort_order)
+# probability_matrix = probability_matrix.reindex(index=sort_order, columns=sort_order)
 np.fill_diagonal(probability_matrix.values, 1.0) 
 
-plt.figure(figsize=(14, 12))
+fig, ax = plt.subplots(figsize=(12, 12))
 sns.heatmap(
-    probability_matrix,
-    annot=False,          # Keep False for 16x16 matrix
-    fmt=".2f",            # Format annotations if you turn them on
-    linewidths=.1,
-    linecolor='white',
-    cmap="YlGnBu",
-    cbar_kws={'label': 'Probability of Matchup (%)'}
+    probability_matrix*100,
+    annot=True,
+    ax = ax,
+    annot_kws={"fontsize": 6},          
+    fmt=".0f",            # Format annotations if you turn them on
+    # linewidths=.1,
+    # linecolor='white',
+    cmap="bone_r", #"YlGnBu"
+    cbar_kws={'label': 'Probability of Matchup (%)','shrink': 0.6},
+    square = True,
+    vmax = 30
 )
 
 plt.title(f'Probability of Team Matchup within Valid Groups (over {NUM_SIMULATIONS} simulations)')
-plt.xlabel('Team B ID')
-plt.ylabel('Team A ID')
+plt.xlabel('Team B ID', fontsize = 8)
+plt.ylabel('Team A ID', fontsize = 8)
+
+ax.tick_params(axis='x', labelsize=6)  # Set X-axis label font size (e.g., 8)
+ax.tick_params(axis='y', labelsize=6) 
 plt.show()
 
 # Display a subset of the final probability matrix
