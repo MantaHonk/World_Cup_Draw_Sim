@@ -41,19 +41,39 @@ def generate_one_valid_assignment(df_teams_input):
     """Generates one random assignment where each group has one team per pot."""
     pots = df_teams_input['Pot_ID'].unique()
     teams = df_teams_input['Team_ID'].unique()
-    groups = len(teams)//len(pots)#teams.div(pots)
-    group_assignments = pd.DataFrame(columns=['Group_ID', 'Pot_ID', 'Team_ID'])
+    groups = len(teams)//len(pots)
+    group_assignments = pd.DataFrame(columns=['Group_ID', 'Pot_ID', 'Team_ID', 'Confederation'])
     
     for pot_id in pots:
         
         pot_teams = df_teams_input[df_teams_input['Pot_ID'] == pot_id]
-        sample_order = pot_teams['Team_ID'].sample(n = groups, replace=False).reset_index(drop=True) 
-        assignments = pd.DataFrame({
-            'Group_ID': range(1,1+groups),
-            'Pot_ID': pot_id,
-            'Team_ID': sample_order
-        })
-        group_assignments = pd.concat([group_assignments, assignments], ignore_index=True)
+        
+        for g in range(1,1+groups):
+            
+            group = group_assignments[group_assignments['Group_ID'] == g]
+            conf_in_group = group['Confederation']
+            valid_teams = pot_teams[~pot_teams['Confederation'].isin(conf_in_group)]
+            
+            if valid_teams.empty:
+                print(f"Could not find a valid team for Group {g} from Pot {pot_id}. Draw failed.")
+                team_drawn_row = pot_teams.sample(n=1,replace=False)
+            else:
+                team_drawn_row = valid_teams.sample(n=1, replace=False)
+            
+            new_assignment = {
+                'Group_ID': g,
+                'Pot_ID': pot_id,
+                'Team_ID': team_drawn_row['Team_ID'].iloc[0],
+                'Confederation': team_drawn_row['Confederation'].iloc[0]
+            }
+
+            group_assignments = pd.concat(
+                [group_assignments, pd.DataFrame([new_assignment])], 
+                ignore_index=True
+            )
+
+            pot_teams = pot_teams.drop(team_drawn_row.index)
+
         print(group_assignments)
     return group_assignments
 
@@ -86,7 +106,6 @@ frequency_matrix = pd.DataFrame(
 
 
 # Normalize the counts to show probability/percentage instead of raw counts
-# Divide by the number of simulations to get the probability of a matchup (0 to 1) 
 probability_matrix = frequency_matrix / NUM_SIMULATIONS
 
 fig, ax = plt.subplots(figsize=(12, 12))
@@ -95,7 +114,7 @@ sns.heatmap(
     annot=True,
     ax = ax,
     annot_kws={"fontsize": 6},          
-    fmt=".0f",            # Format annotations if you turn them on
+    fmt=".0f",
     # linewidths=.1,
     # linecolor='white',
     cmap="bone_r", #"YlGnBu"
