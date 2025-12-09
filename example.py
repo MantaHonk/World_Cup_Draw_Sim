@@ -112,12 +112,31 @@ def generate_one_valid_assignment(df_teams_input):
         # 3. Iterate through each group (G1 to G8, for example) to place a team from the current pot
         for g in range(1, 1 + groups):
             
-            # A. Find confederations *already* assigned to this group 'g' in previous pots
-            # This checks the MASTER list of assignments made so far
-            conf_in_group = master_assignments[master_assignments['Group_ID'] == g]['Confederation'].unique()
-            
-            # B. Filter the available pot teams to find valid candidates (confederation check)
-            valid_teams = pot_teams_pool[~pot_teams_pool['Confederation'].isin(conf_in_group)]
+            # Assuming this is inside your main loops:
+
+            # ... (inside the loop for g in range...)
+
+            group = master_assignments[master_assignments['Group_ID'] == g]
+            conf_in_group = group['Confederation'].unique()
+
+            EUROPE_CONFED = 'UEFA' # Make sure this matches your actual DataFrame values
+            MAX_EURO_PER_GROUP = 2
+
+            # 1. Start with a strict filter: Exclude any confederation already present
+            strict_conflicts = [conf for conf in conf_in_group if conf != EUROPE_CONFED]
+            valid_teams = pot_teams_pool[~pot_teams_pool['Confederation'].isin(conf_in_group != "UEFA")]
+
+            # 2. Add the UEFA-specific condition:
+            euro_count_in_group = (group['Confederation'] == EUROPE_CONFED).sum()
+
+            if euro_count_in_group >= MAX_EURO_PER_GROUP:
+                # If the group already has 2 or more Euro teams, we must filter out any remaining Euro teams from valid_teams
+                valid_teams = valid_teams[valid_teams['Confederation'] != EUROPE_CONFED]
+                
+            # At this point, 'valid_teams' contains all teams that meet all constraints.
+
+
+# ... rest of your code to sample from valid_teams and update assignments ...
             
             if valid_teams.empty:
                 # This should ideally not happen if constraints allow a full draw
@@ -153,7 +172,7 @@ def generate_one_valid_assignment(df_teams_input):
 
 # --- 3. Run Many Simulations and Aggregate Frequencies ---
 
-NUM_SIMULATIONS = 100 # More simulations = smoother, more accurate heatmap
+NUM_SIMULATIONS = 1 # More simulations = smoother, more accurate heatmap
 
 for _ in range(NUM_SIMULATIONS):
     # Get one valid grouping

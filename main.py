@@ -52,7 +52,10 @@ def generate_one_valid_assignment(df_teams_input):
             
             group = group_assignments[group_assignments['Group_ID'] == g]
             conf_in_group = group['Confederation']
-            valid_teams = pot_teams[~pot_teams['Confederation'].isin(conf_in_group)]
+            
+            valid_teams = pot_teams[~pot_teams['Confederation'].isin(conf_in_group != "UEFA")]
+            if (conf_in_group == "UEFA").sum() > 1:
+                valid_teams = valid_teams[valid_teams["Confederation"] != "UEFA"]
             
             if valid_teams.empty:
                 print(f"Could not find a valid team for Group {g} from Pot {pot_id}. Draw failed.")
@@ -74,12 +77,12 @@ def generate_one_valid_assignment(df_teams_input):
 
             pot_teams = pot_teams.drop(team_drawn_row.index)
 
-        print(group_assignments)
+        #print(group_assignments)
     return group_assignments
 
 
 
-NUM_SIMULATIONS = 1 # More simulations = smoother, more accurate heatmap
+NUM_SIMULATIONS = 100 # More simulations = smoother, more accurate heatmap
 
 for _ in range(NUM_SIMULATIONS):
     current_assignment = generate_one_valid_assignment(df_teams)
