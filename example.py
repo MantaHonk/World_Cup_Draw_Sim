@@ -73,7 +73,8 @@ teams_df = pd.read_csv(teams)
 data = {
     'Pot_ID':teams_df["Pot"].to_list(),
     'Team_ID':teams_df["Name"].to_list(),
-    'Ranking':teams_df["Ranking"].to_list()
+    'Ranking':teams_df["Ranking"].to_list(),
+    'Confederation':teams_df["Confederation"].to_list()
 }
 df_teams = pd.DataFrame(data)
 
@@ -89,28 +90,70 @@ team_to_index = {team: i for i, team in enumerate(all_teams_list)}
 
 # --- 2. Function to generate one valid assignment (from previous answer) ---
 
+
 def generate_one_valid_assignment(df_teams_input):
     """Generates one random assignment where each group has one team per pot."""
+    
+    # 1. Setup metadata
     pots = df_teams_input['Pot_ID'].unique()
     teams = df_teams_input['Team_ID'].unique()
-    num_teams_per_pot = len(teams)//len(pots)#teams.div(pots)
-    group_assignments = pd.DataFrame(columns=['Group_ID', 'Pot_ID', 'Team_ID'])
+    # Calculate the number of groups (e.g., 32 teams / 4 pots = 8 groups)
+    groups = len(teams) // len(pots) 
     
+    # Initialize the master DataFrame where we record all assignments as we draw them
+    # This DF starts empty but mirrors the structure of df_teams_input
+    master_assignments = pd.DataFrame(columns=['Group_ID', 'Pot_ID', 'Team_ID', 'Confederation'])
+    
+    # 2. Iterate through each pot one by one
     for pot_id in pots:
-        pot_teams = df_teams_input[df_teams_input['Pot_ID'] == pot_id]['Team_ID'].sample(frac=1, replace=False).reset_index(drop=True)
-        assignments = pd.DataFrame({
-            'Group_ID': range(1,1+num_teams_per_pot),
-            'Pot_ID': pot_id,
-            'Team_ID': pot_teams
-        })
-        group_assignments = pd.concat([group_assignments, assignments], ignore_index=True)
-    print(group_assignments)
-    return group_assignments
+        # Start with a fresh pool of teams *available* in this specific pot
+        pot_teams_pool = df_teams_input[df_teams_input['Pot_ID'] == pot_id].copy()
+        
+        # 3. Iterate through each group (G1 to G8, for example) to place a team from the current pot
+        for g in range(1, 1 + groups):
+            
+            # A. Find confederations *already* assigned to this group 'g' in previous pots
+            # This checks the MASTER list of assignments made so far
+            conf_in_group = master_assignments[master_assignments['Group_ID'] == g]['Confederation'].unique()
+            
+            # B. Filter the available pot teams to find valid candidates (confederation check)
+            valid_teams = pot_teams_pool[~pot_teams_pool['Confederation'].isin(conf_in_group)]
+            
+            if valid_teams.empty:
+                # This should ideally not happen if constraints allow a full draw
+                print(f"Could not find a valid team for Group {g} from Pot {pot_id}. Draw failed.")
+                team_drawn_row = pot_teams_pool.sample(n=1,replace=False)
+            else:
+            # C. Draw one random team from the valid candidates
+            # We sample the entire row to get both Team_ID and Confederation
+                team_drawn_row = valid_teams.sample(n=1, replace=False)
+            
+            # D. Record the assignment in the master list
+            new_assignment = {
+                'Group_ID': g,
+                'Pot_ID': pot_id,
+                'Team_ID': team_drawn_row['Team_ID'].iloc[0],
+                'Confederation': team_drawn_row['Confederation'].iloc[0]
+            }
+            # Use pd.concat to append the new assignment row efficiently
+            master_assignments = pd.concat(
+                [master_assignments, pd.DataFrame([new_assignment])], 
+                ignore_index=True
+            )
+            
+            # E. Remove the drawn team from the current pot's pool so it can't be selected again
+            pot_teams_pool = pot_teams_pool.drop(team_drawn_row.index)
+            # The 'pot_teams_pool' variable is now smaller for the next iteration of 'g'
+
+    # The function returns the complete list of all valid assignments
+    # Sort for cleaner output if desired: master_assignments.sort_values(by=['Group_ID', 'Pot_ID'])
+    return master_assignments
+
 
 
 # --- 3. Run Many Simulations and Aggregate Frequencies ---
 
-NUM_SIMULATIONS = 1 # More simulations = smoother, more accurate heatmap
+NUM_SIMULATIONS = 100 # More simulations = smoother, more accurate heatmap
 
 for _ in range(NUM_SIMULATIONS):
     # Get one valid grouping
