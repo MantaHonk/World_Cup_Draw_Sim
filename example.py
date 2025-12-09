@@ -92,24 +92,25 @@ team_to_index = {team: i for i, team in enumerate(all_teams_list)}
 def generate_one_valid_assignment(df_teams_input):
     """Generates one random assignment where each group has one team per pot."""
     pots = df_teams_input['Pot_ID'].unique()
-    num_teams_per_pot = 12
+    teams = df_teams_input['Team_ID'].unique()
+    num_teams_per_pot = len(teams)//len(pots)#teams.div(pots)
     group_assignments = pd.DataFrame(columns=['Group_ID', 'Pot_ID', 'Team_ID'])
     
     for pot_id in pots:
         pot_teams = df_teams_input[df_teams_input['Pot_ID'] == pot_id]['Team_ID'].sample(frac=1, replace=False).reset_index(drop=True)
         assignments = pd.DataFrame({
-            'Group_ID': range(num_teams_per_pot),
+            'Group_ID': range(1,1+num_teams_per_pot),
             'Pot_ID': pot_id,
             'Team_ID': pot_teams
         })
         group_assignments = pd.concat([group_assignments, assignments], ignore_index=True)
-    
+    print(group_assignments)
     return group_assignments
 
 
 # --- 3. Run Many Simulations and Aggregate Frequencies ---
 
-NUM_SIMULATIONS = 100 # More simulations = smoother, more accurate heatmap
+NUM_SIMULATIONS = 1 # More simulations = smoother, more accurate heatmap
 
 for _ in range(NUM_SIMULATIONS):
     # Get one valid grouping
@@ -124,12 +125,15 @@ for _ in range(NUM_SIMULATIONS):
             for j in range(len(teams_in_group)):
                 team_a = teams_in_group[i]
                 team_b = teams_in_group[j]
-                
+                    
+                idx_a = team_to_index[team_a]
+                idx_b = team_to_index[team_b]
+                frequency_matrix_np[idx_a, idx_b] += 1
                 # We only care about unique pairs (Team A meets Team B), not A meets A
-                if team_a != team_b:
-                    idx_a = team_to_index[team_a]
-                    idx_b = team_to_index[team_b]
-                    frequency_matrix_np[idx_a, idx_b] += 1
+                # if team_a != team_b:
+                #     idx_a = team_to_index[team_a]
+                #     idx_b = team_to_index[team_b]
+                #     frequency_matrix_np[idx_a, idx_b] += 1
 
 # Convert numpy matrix back to a pandas DataFrame for plotting
 frequency_matrix = pd.DataFrame(
@@ -147,7 +151,7 @@ frequency_matrix = pd.DataFrame(
 # sort_order = desired_order_df['Team_ID'].to_list()
 probability_matrix = frequency_matrix / NUM_SIMULATIONS
 # probability_matrix = probability_matrix.reindex(index=sort_order, columns=sort_order)
-np.fill_diagonal(probability_matrix.values, 1.0) 
+#np.fill_diagonal(probability_matrix.values, 1.0) 
 
 fig, ax = plt.subplots(figsize=(12, 12))
 sns.heatmap(
