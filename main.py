@@ -19,7 +19,7 @@ Each group requires 1 UEFA
 teams = 'teams.csv'
 
 teams_df = pd.read_csv(teams)
-print(teams_df.head())
+#print(teams_df.head())
 
 data = {
     'Pot_ID':teams_df["Pot"].to_list(),
@@ -43,6 +43,8 @@ def generate_one_valid_assignment(df_teams_input):
     teams = df_teams_input['Team_ID'].unique()
     groups = len(teams)//len(pots)
     group_assignments = pd.DataFrame(columns=['Group_ID', 'Pot_ID', 'Team_ID', 'Confederation'])
+    IC_PATH_A_POTENTIAL_CONFS = ["OFC", "CONCACAF", "CAF"] 
+    IC_PATH_B_POTENTIAL_CONFS = ["AFC", "CONMEBOL", "CONCACAF"]
     
     for pot_id in pots:
         
@@ -53,13 +55,26 @@ def generate_one_valid_assignment(df_teams_input):
             group = group_assignments[group_assignments['Group_ID'] == g]
             conf_in_group = group['Confederation']
             
-            valid_teams = pot_teams[~pot_teams['Confederation'].isin(conf_in_group != "UEFA")]
-            if (conf_in_group == "UEFA").sum() > 1:
-                valid_teams = valid_teams[valid_teams["Confederation"] != "UEFA"]
+            valid_teams = pot_teams[~pot_teams['Confederation'].isin(conf_in_group)]
+            if (conf_in_group == "UEFA").sum() < 2:
+                valid_teams = pd.concat([valid_teams, pot_teams[pot_teams['Confederation'] == "UEFA"]])
+            
+            if "IC Path A" in valid_teams["Team_ID"].values:
+                conflicts_with_ic_path_a = any(conf in conf_in_group.to_list() for conf in IC_PATH_A_POTENTIAL_CONFS)
+                if conflicts_with_ic_path_a:
+                    #print("Removing IC Path A due to conflict")
+                    valid_teams = valid_teams[valid_teams['Team_ID'] != "IC Path A"]
+            if "IC Path B" in valid_teams["Team_ID"].values:
+                conflicts_with_ic_path_b = any(conf in conf_in_group.to_list() for conf in IC_PATH_B_POTENTIAL_CONFS)
+                if conflicts_with_ic_path_b:
+                    #print("Removing IC Path B due to conflict")
+                    valid_teams = valid_teams[valid_teams['Team_ID'] != "IC Path B"]
+            #print(group)
+            #print(valid_teams)
             
             if valid_teams.empty:
-                print(f"Could not find a valid team for Group {g} from Pot {pot_id}. Draw failed.")
-                team_drawn_row = pot_teams.sample(n=1,replace=False)
+                #print(f"Could not find a valid team for Group {g} from Pot {pot_id}. Draw failed.")
+                raise ValueError("Draw failed due to constraints.")
             else:
                 team_drawn_row = valid_teams.sample(n=1, replace=False)
             
@@ -82,23 +97,33 @@ def generate_one_valid_assignment(df_teams_input):
 
 
 
-NUM_SIMULATIONS = 100 # More simulations = smoother, more accurate heatmap
-
-for _ in range(NUM_SIMULATIONS):
-    current_assignment = generate_one_valid_assignment(df_teams)
+NUM_SIMULATIONS = 1000 # More simulations = smoother, more accurate heatmap
+valid_sims = 0
+num_invalid = 0
+num_cycles = 0
+while valid_sims < NUM_SIMULATIONS:
+    num_cycles += 1
+    try:
+        current_assignment = generate_one_valid_assignment(df_teams)
     
-    for group_id, group_data in current_assignment.groupby('Group_ID'):
-        teams_in_group = group_data['Team_ID'].tolist()
-        
-        for i in range(len(teams_in_group)):
-            for j in range(len(teams_in_group)):
-                team_a = teams_in_group[i]
-                team_b = teams_in_group[j]
-                    
-                idx_a = team_to_index[team_a]
-                idx_b = team_to_index[team_b]
-                frequency_matrix_np[idx_a, idx_b] += 1
-
+        for group_id, group_data in current_assignment.groupby('Group_ID'):
+            teams_in_group = group_data['Team_ID'].tolist()
+            
+            for i in range(len(teams_in_group)):
+                for j in range(len(teams_in_group)):
+                    team_a = teams_in_group[i]
+                    team_b = teams_in_group[j]
+                        
+                    idx_a = team_to_index[team_a]
+                    idx_b = team_to_index[team_b]
+                    frequency_matrix_np[idx_a, idx_b] += 1
+        valid_sims += 1
+        if valid_sims % 100 == 0:
+            print(f"Completed {valid_sims} valid simulations so far")
+    except ValueError:
+        num_invalid += 1
+        continue
+print(f"Completed {valid_sims} valid simulations with {num_invalid} invalid attempts over {num_cycles} total cycles.")
 # Convert numpy matrix back to a pandas DataFrame for plotting
 frequency_matrix = pd.DataFrame(
     frequency_matrix_np,
@@ -126,9 +151,7 @@ sns.heatmap(
     vmax = 30
 )
 
-plt.title(f'Probability of Team Matchup within Valid Groups (over {NUM_SIMULATIONS} simulations)')
-plt.xlabel('Team B ID', fontsize = 8)
-plt.ylabel('Team A ID', fontsize = 8)
+plt.title(f'Probability of Team Matchup For 2026 FIFA World Cup (over {NUM_SIMULATIONS} simulations)')
 
 ax.tick_params(axis='x', labelsize=6) 
 ax.tick_params(axis='y', labelsize=6) 
